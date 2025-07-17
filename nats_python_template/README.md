@@ -32,46 +32,37 @@ This repo shows how to **quickly connect to the Pumpfun & Pumpswap on-chain Sola
     pip install -r requirements.txt
     ```
 
-3.  Drop your **credential file** ( `*.creds` ) _or_ a **user JWT + NKey seed** somewhere safe on disk.
+3.  Copy `.env.example` → `.env` and fill in **either** `NATS_CREDS` **or** the `NATS_JWT` + `NATS_NKEY` pair plus your stream subject:
+
+    ```env
+    NATS_SERVER=nats://edge.pump.fun:4223
+    NATS_CREDS=/absolute/path/to/user.creds
+    # NATS_JWT=/path/user.jwt
+    # NATS_NKEY=/path/user.nk
+    NATS_SUBJECT=basic.>
+    ```
 
     * Credentials are issued by the Pumpfun User Management API (`/api/users`).
     * Never commit creds / seeds to git!
 
-4.  Run the consumer:
+4.  Run the consumer (no CLI flags needed – everything is read from `.env` / env vars):
 
     ```bash
-    python main.py \
-      --server nats://edge.pump.fun:4223 \
-      --creds  /path/to/user.creds \
-      --subject "basic.>"
+    python main.py
     ```
 
-    or with separate files:
-
-    ```bash
-    python main.py \
-      --server nats://edge.pump.fun:4223 \
-      --jwt    /path/to/user.jwt \
-      --nkey   /path/to/user.nk \
-      --subject "premium.trades.*"
-    ```
-
-When messages arrive they will be printed to stdout.  Press `Ctrl-C` to exit gracefully.
+Messages will stream in real-time and be printed to stdout. Press `Ctrl-C` to disconnect cleanly.
 
 ---
 
-## 🧩 CLI flags
+## 🌱 Environment variables
 
-| Flag | Env Var | Description |
-|------|---------|-------------|
-| `--server` | `NATS_SERVER` | NATS server URL (default `nats://127.0.0.1:4223`) |
-| `--creds`  | `NATS_CREDS`  | Path to `*.creds` file (preferred) |
-| `--jwt`    | `NATS_JWT`    | Path to user JWT (when not using creds) |
-| `--nkey`   | `NATS_NKEY`   | Path to user NKey seed (when not using creds) |
-| `--subject`| `NATS_SUBJECT`| Subject / wildcard to subscribe to (default `basic.>`) |
-| `--queue`  | `NATS_QUEUE`  | Queue group name (optional) |
-| `--jetstream` | `NATS_JETSTREAM` | Treat subject as JetStream stream & create a durable consumer |
-| `--durable`   | `NATS_DURABLE`   | Durable consumer name (JetStream only) |
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `NATS_SERVER` | NATS server URL | `nats://edge.pump.fun:4223` |
+| `NATS_CREDS` | Path to creds file (preferred auth) | `/home/user/basic.creds` |
+| `NATS_JWT` / `NATS_NKEY` | Paths to JWT + NKey seed (advanced auth) | `/jwt/u.jwt`, `/jwt/u.nk` |
+| `NATS_SUBJECT` | Subject or wildcard to stream | `basic.>` |
 
 ---
 
@@ -80,8 +71,8 @@ When messages arrive they will be printed to stdout.  Press `Ctrl-C` to exit gra
 * The **credential file** bundles the user JWT **and** the NKey seed.  It’s the easiest way to authenticate.
 * If you prefer to keep secrets split, pass `--jwt` and `--nkey` instead of `--creds`.
 * All examples use the official `nats-py` client.
-* The `--jetstream` flag shows how to create a **pull consumer** that receives historical data reliably.
-* For real-time streaming only, omit `--jetstream` – a plain `SUB` is faster and incurs zero server state.
+* This template **always** uses JetStream with an **ephemeral push consumer** – no cleanup required.
+* If you wish to replay historical data you can add a durable consumer in your own code, but for live pricing a push consumer is the lightest weight option.
 * Remember: **Basic tier** can only read `basic.*` subjects, **Plus/Pro** can read both `basic.*` and `premium.*`.
 
 ---
